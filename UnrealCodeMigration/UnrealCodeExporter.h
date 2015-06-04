@@ -6,15 +6,16 @@
 
 class UnrealCodeExporter
 {
-	typedef unsigned short						uint16;
+public:
 	typedef std::vector<std::string>			stringList;
 	typedef std::pair<std::string, std::string> stringPair;
 	typedef std::map<std::string, stringList>	stringListMap;
 	typedef std::map<std::string, stringPair>	stringPairMap;
 
+private:
 	stringListMap		ClassDependencies;
 	stringPairMap		ClassFiles;
-	std::vector<uint16>	SelectedClasses;
+	std::vector<bool>	SelectedClasses;
 
 	std::string			SourcePath;
 	std::string			SourceProjectName;
@@ -26,16 +27,27 @@ class UnrealCodeExporter
 public:
 	bool			SetSourcePath( const std::string& Path ); // Path to Source .uproject File
 	bool			SetTargetPath( const std::string& Path ); // Path to Target .uproject File or Directory
+	bool			AnalyseSource(); // Analyse Source Project
+	bool			CopySelection(); // Copy Selection from Source Project ot Target Project or Directory
+	
+	bool			GetClassList( stringList& ClassList );
+	bool			SetClassSelection( const std::vector<bool>& ClassSelectionList );
 
-private:
-	void			SetError( const std::string& Message, const std::string& Section );
+private: // Path has to be Valid
+	void			SearchProjectClasses( const std::string& Path );
+	void			AnalyseClassDependency( const std::string& ClassName, const stringPair& FilePathPair );
+	void			SetLocation( const std::string& Path, std::string& SavePath, std::string& SaveName ) const; 
+
 	bool			CheckPath( const std::string& Path, const bool CheckUproject ) const;
-	void			SetLocation( const std::string& Path, std::string& SavePath, std::string& SaveName ) const; // Path has to be Valid
+	bool			CheckSourceValid() const;
 
+	void			SetError( const std::string& Message, const std::string& Section );
+	void			ClearData();
 public:
 					UnrealCodeExporter();
 					~UnrealCodeExporter();
 
 	std::string		GetLastError() const;
+	void			ClearError();
 };
 
