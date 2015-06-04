@@ -3,6 +3,9 @@
 *.lo
 *.o
 *.obj
+*.log
+**/Debug
+
 
 # Precompiled Headers
 *.gch
