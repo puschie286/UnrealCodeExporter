@@ -18,4 +18,5 @@
 *.log
 *.sdf
 *.opensdf
+*.suo
 **/Debug

@@ -8,7 +8,7 @@ class UnrealCodeExporter
 {
 public:
 	typedef std::vector<std::string>			stringList;
-	typedef std::pair<std::string, std::string> stringPair;
+	typedef std::pair<std::string, std::string> stringPair; // Header, Cpp
 	typedef std::map<std::string, stringList>	stringListMap;
 	typedef std::map<std::string, stringPair>	stringPairMap;
 
@@ -34,12 +34,13 @@ public:
 	bool			SetClassSelection( const std::vector<bool>& ClassSelectionList );
 
 private: // Path has to be Valid
-	void			SearchProjectClasses( const std::string& Path );
-	void			AnalyseClassDependency( const std::string& ClassName, const stringPair& FilePathPair );
+	void			SearchProjectClasses( const std::string& ProjectPath, const std::string& ProjectName, stringPairMap& ClassMap );
+	void			AnalyseClassDependency( const std::string& ClassName, const stringPair& FilePathPair, const std::string& Path, const std::string& ProjectName );
 	void			SetLocation( const std::string& Path, std::string& SavePath, std::string& SaveName ) const; 
 
 	bool			CheckPath( const std::string& Path, const bool CheckUproject ) const;
 	bool			CheckSourceValid() const;
+	bool			CheckSourceFolder( const std::string& ProjectPath ) const;
 
 	void			SetError( const std::string& Message, const std::string& Section );
 	void			ClearData();

@@ -1,0 +1,6 @@
+1. Integrate Project Module Dependency 
+	1. Analyse Project.cs ? Find Module Location
+	2. Get Module ClassList
+2. Check Project Dependency in Classes
+	1. Add Module Dependency Check in 'AnalyseClassDependency'
+	2. Add in ModuleDependencyList
