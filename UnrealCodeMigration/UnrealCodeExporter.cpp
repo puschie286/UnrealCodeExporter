@@ -39,6 +39,7 @@ bool UnrealCodeExporter::AnalyseSource()
 {
 	if( CheckSourceValid() )
 	{
+		// TODO : Remove for Non-UnrealProject Export
 		if( CheckSourceFolder( SourcePath ) )
 		{
 			SearchProjectClasses( SourcePath, SourceProjectName, ClassFiles );
@@ -74,6 +75,13 @@ bool UnrealCodeExporter::CopySelection()
 	{
 		// TODO : Copy Selected Files
 		// TODO : Manipulate Coppied Files
+
+		if( TargetProjectName.empty() ) // Export to Non-UnrealProject
+		{
+			const std::string ProjectName = "PROJECTNAME.h";
+			const std::string ProjectAPI = "PROJECTNAME_API";
+			//const std::string UseModuleComment = "//MODULE : ";
+		}
 	}
 	else
 	{
@@ -100,26 +108,67 @@ bool UnrealCodeExporter::GetClassList( stringList& ClassList )
 	return false;
 }
 
-bool UnrealCodeExporter::SetClassSelection( const std::vector<bool>& ClassSelectionList )
+bool UnrealCodeExporter::SetClassSelection( const stringList& ClassSelectionList )
 {
 	if( CheckSourceValid() )
 	{
-		if( SelectedClasses.size() == ClassSelectionList.size() )
+		if( !ClassFiles.empty() )
 		{
-			// TODO : Check SelectedClass Dependecy
-			SelectedClasses = ClassSelectionList;
-			return true;
+			std::string ErrorString;
+			for( const std::string& Class : ClassSelectionList )
+			{
+				auto Found = ClassFiles.find( Class );
+				if( Found != ClassFiles.end() )
+				{
+					SelectedClasses[std::distance( ClassFiles.begin(), Found )] = true;
+					// TODO : Check Dependency
+				}
+				else
+				{
+					ErrorString += Class + ", ";
+				}
+			}
+			if( ErrorString.empty() )
+			{
+				return true;
+			}
+			else
+			{
+				SetError( "Following Classes was not founded : " + ErrorString.substr( 0, -2 ), "SetClassSelection" );
+			}
 		}
 		else
 		{
-			SetError( "Unvalid ClassSelectionList Size", "SetClassSelection" );
+			SetError( "No Classes available", "SetClassSelection" );
 		}
 	}
 	else
 	{
 		SetError( "SourceProject not valid", "SetClassSelection" );
 	}
-	
+	return false;
+}
+
+bool UnrealCodeExporter::SetClassSelectionAll( const bool Value )
+{
+	if( CheckSourceValid() )
+	{
+		if( !ClassFiles.empty() )
+		{
+			for( auto& Class : SelectedClasses )
+			{
+				Class = Value;
+			}
+		}
+		else
+		{
+			SetError( "No Classes available", "SetClassSelection" );
+		}
+	}
+	else
+	{
+		SetError( "SourceProject not valid", "SetClassSelection" );
+	}
 	return false;
 }
 
@@ -171,6 +220,7 @@ bool UnrealCodeExporter::CheckSourceFolder( const std::string& ProjectPath ) con
 
 void UnrealCodeExporter::SearchProjectClasses( const std::string& ProjectPath, const std::string& ProjectName, stringPairMap& ClassMap )
 {
+	// TODO : Add Parameter for Non-UnrealProject Search
 	stringList IgnoreFolders = { ".", "..", "Resources" };
 	
 	auto FileFound = [&]( std::string& ClassName, bool IsHeader, std::string& Path ) -> void
@@ -242,7 +292,7 @@ void UnrealCodeExporter::AnalyseClassDependency( const std::string& ClassName, c
 		{
 			if( Line.find( "#include" ) != Line.npos )
 			{
-				if( Line.rfind( ".generated" ) != Line.npos )
+				if( Line.rfind( ".generated" ) != Line.npos || Line.rfind( ">" ) != Line.npos )
 				{
 					continue;
 				}

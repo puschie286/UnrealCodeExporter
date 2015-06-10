@@ -31,7 +31,8 @@ public:
 	bool			CopySelection(); // Copy Selection from Source Project ot Target Project or Directory
 	
 	bool			GetClassList( stringList& ClassList );
-	bool			SetClassSelection( const std::vector<bool>& ClassSelectionList );
+	bool			SetClassSelection( const stringList& ClassSelectionList );
+	bool			SetClassSelectionAll( const bool Value );
 
 private: // Path has to be Valid
 	void			SearchProjectClasses( const std::string& ProjectPath, const std::string& ProjectName, stringPairMap& ClassMap );
