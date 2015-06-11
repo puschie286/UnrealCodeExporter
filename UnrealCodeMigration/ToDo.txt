@@ -1,7 +1,7 @@
 1. Import from Non-UnrealProject Directory
-	1. Search for .cpp, .h Files
-	2. Valid Unreal-Class & Exportet via UnrealCodeExporter
-	3. Copy to UnrealProject & Non-UnrealProject
+	1. Valid Unreal-Class & Exportet via UnrealCodeExporter
+	2. Copy to UnrealProject & Non-UnrealProject
+	3. Update Error Messages
 2. Integrate Project Module Dependency 
 	1. Analyse Project.cs ? Find Module Location
 	2. Get Module ClassList

@@ -6,22 +6,30 @@ void PostError( UnrealCodeExporter& Instance );
 
 int main()
 {
-	CodeMigrate Instance;
 	UnrealCodeExporter Exporter;
 
 	// Test Setup
-	if( !Exporter.SetSourcePath( "F:\\UnrealProjects\\UnrealDev\\SoundVisualization\\SoundVisualization.uproject" ) ) PostError( Exporter );
-	if( !Exporter.SetTargetPath( "F:\\UnrealProjects\\UnrealDev\\PhysicalConstraint\\" ) ) PostError( Exporter );
+	if( !Exporter.SetPath( UnrealCodeExporter::SOURCE, "F:\\UnrealProjects\\UnrealDev\\SoundVisualization\\SoundVisualization.uproject") ) PostError( Exporter );
+	// if( !Exporter.SetSourcePath( "F:\\UnrealProjects\\UnrealDev\\SoundVisualization\\" ) ) PostError( Exporter );
+	if( !Exporter.SetPath( UnrealCodeExporter::TARGET, "F:\\UnrealProjects\\UnrealDev\\PhysicalConstraint\\PhysicalConstraint.uproject" ) ) PostError( Exporter );
+	//if( !Exporter.SetTargetPath( "F:\\UnrealProjects\\UnrealDev\\PhysicalConstraint\\" ) ) PostError( Exporter );
 	
 	// Test Analyse
-	if( !Exporter.AnalyseSource() ) PostError( Exporter );
+	if( !Exporter.Analyse( UnrealCodeExporter::SOURCE ) ) PostError( Exporter );
+	if( !Exporter.Analyse( UnrealCodeExporter::TARGET ) ) PostError( Exporter );
 	PostError( Exporter ); // Get Analyse Warnings
 	
 	// Test Class List
-	UnrealCodeExporter::stringList ClassList;
-	if( !Exporter.GetClassList( ClassList ) ) PostError( Exporter );
+	UnrealCodeExporter::stringList ClassList, TargetClassList;
+	if( !Exporter.GetClassList( ClassList, UnrealCodeExporter::SOURCE ) ) PostError( Exporter );
+	if( !Exporter.GetClassList( TargetClassList, UnrealCodeExporter::TARGET ) ) PostError( Exporter );
 	std::cout << "Class list : " << std::endl;
 	for( std::string& Entry : ClassList )
+	{
+		std::cout << Entry << std::endl;
+	}
+	std::cout << "Target Class list : " << std::endl;
+	for( std::string& Entry : TargetClassList )
 	{
 		std::cout << Entry << std::endl;
 	}
@@ -35,12 +43,10 @@ int main()
 	{
 		ClassSelection.clear();
 		ClassSelection.push_back( ClassList[0] );
+		if( !Exporter.SetClassSelection( ClassSelection ) ) PostError( Exporter );
 	}
-	/* OLD Version
-	Instance.LoadPath( "F:\\UnrealProjects\\DevUnreal\\PhysicalConstraint\\PhysicalConstraint.uproject" );
-	Instance.CopyTo( "F:\\UnrealProjects\\DevUnreal\\SoundVisualization\\SoundVisualization.uproject" );
-	*/
 
+	// Wait with close
 	int i;
 	std::cin >> i;
 }

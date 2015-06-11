@@ -6,61 +6,56 @@
 #include <fstream>
 
 
-bool UnrealCodeExporter::SetSourcePath( const std::string& Path )
+bool UnrealCodeExporter::SetPath( const Targets Target, const std::string& Path )
 {
-	if( CheckPath( Path, true ) )
+	if( CheckPath( Path ) )
 	{
-		SetLocation( Path, SourcePath, SourceProjectName );
-		ClearData();
+		SetLocation( Path, ( Target ) ? ( SourcePath ) : ( TargetPath ), ( Target ) ? ( SourceProjectName ) : ( TargetProjectName ) );
+		( Target ) ? ( SourceIsUnreal = false ) : ( TargetIsUnreal = false );
 		return true;
 	}
 	else
 	{
-		SetError( "Uproject not found | " + Path, "SetSourcePath" );
+		SetError( "Path not Valid | " + Path, "SetPath" );
 	}
 	return false;
 }
 
-bool UnrealCodeExporter::SetTargetPath( const std::string& Path )
+bool UnrealCodeExporter::Analyse( Targets Target )
 {
-	if( CheckPath( Path, false ) )
+	const std::string&	Path = ( Target ) ? ( SourcePath ) : ( TargetPath );
+	const std::string&	ProjectName = ( Target ) ? ( SourceProjectName ) : ( TargetProjectName );
+	bool&				IsUnreal = ( Target ) ? ( SourceIsUnreal ) : ( TargetIsUnreal );
+	stringPairMap&		ClassMap = ( Target ) ? ( ClassFiles ) : ( TargetClassFiles );
+	if( CheckValid( Target ) )
 	{
-		SetLocation( Path, TargetPath, TargetProjectName );
-		return true;
-	}
-	else
-	{
-		SetError( "Unvalid Path | " + Path, "SetTargetPath" );
-	}
-	return false;
-}
-
-bool UnrealCodeExporter::AnalyseSource()
-{
-	if( CheckSourceValid() )
-	{
-		// TODO : Remove for Non-UnrealProject Export
-		if( CheckSourceFolder( SourcePath ) )
+		IsUnreal = CheckPath( Path + ProjectName + ".uproject", true );
+		const std::string UnrealProjectPath = ( IsUnreal ) ? ( "Source\\" + ProjectName ) : ( "" );
+		if( IsUnreal )
 		{
-			SearchProjectClasses( SourcePath, SourceProjectName, ClassFiles );
-			
-			// create default selection
-			SelectedClasses.clear();
-			for( size_t i = 0; i < ClassFiles.size(); ++i )
+			if( !CheckSourceFolder( Path ) )
 			{
-				SelectedClasses.push_back( true );
+				SetError( "SourceProject has no Source-Directory", "AnalyseSource" );
+				return false;
 			}
 
-			for( auto& Element : ClassFiles )
-			{
-				AnalyseClassDependency( Element.first, Element.second, SourcePath + "Source\\" + SourceProjectName, SourceProjectName );
-			}
-			return true;
+		}
+		SearchProjectClasses( Target );
+		
+		if( !IsUnreal )// Non-UnrealProject Import
+		{
+			// TODO : Verify for Non-UnrealProject Classes
 		}
 		else
 		{
-			SetError( "SourceProject has no Source-Directory", "AnalyseSource" );
+			SelectedClasses.resize( ClassMap.size(), true ); // Create Default Selection
 		}
+
+		for( auto& ClassIter : ClassMap )
+		{
+			AnalyseClassDependency( ClassIter.first, ClassIter.second, Path + UnrealProjectPath, ProjectName );
+		}
+		return true;
 	}
 	else
 	{
@@ -71,7 +66,7 @@ bool UnrealCodeExporter::AnalyseSource()
 
 bool UnrealCodeExporter::CopySelection()
 {
-	if( CheckSourceValid()  )
+	if( CheckValid()  )
 	{
 		// TODO : Copy Selected Files
 		// TODO : Manipulate Coppied Files
@@ -90,12 +85,13 @@ bool UnrealCodeExporter::CopySelection()
 	return false;
 }
 
-bool UnrealCodeExporter::GetClassList( stringList& ClassList )
+bool UnrealCodeExporter::GetClassList( stringList& ClassList, Targets Target )
 {
-	if( CheckSourceValid() )
+	stringPairMap& ClassMap = ( Target ) ? ( ClassFiles ) : ( TargetClassFiles );
+	if( CheckValid( Target ) )
 	{
 		ClassList.clear();
-		for( auto& Element : ClassFiles )
+		for( auto& Element : ClassMap )
 		{
 			ClassList.push_back( Element.first );
 		}
@@ -103,14 +99,14 @@ bool UnrealCodeExporter::GetClassList( stringList& ClassList )
 	}
 	else
 	{
-		SetError( "SourceProject not Valid", "GetClassList" );
+		SetError( "Project not Valid", "GetClassList" );
 	}
 	return false;
 }
 
 bool UnrealCodeExporter::SetClassSelection( const stringList& ClassSelectionList )
 {
-	if( CheckSourceValid() )
+	if( CheckValid() )
 	{
 		if( !ClassFiles.empty() )
 		{
@@ -151,7 +147,7 @@ bool UnrealCodeExporter::SetClassSelection( const stringList& ClassSelectionList
 
 bool UnrealCodeExporter::SetClassSelectionAll( const bool Value )
 {
-	if( CheckSourceValid() )
+	if( CheckValid() )
 	{
 		if( !ClassFiles.empty() )
 		{
@@ -168,6 +164,28 @@ bool UnrealCodeExporter::SetClassSelectionAll( const bool Value )
 	else
 	{
 		SetError( "SourceProject not valid", "SetClassSelection" );
+	}
+	return false;
+}
+
+bool UnrealCodeExporter::SwitchProjects()
+{
+	if( CheckValid( SOURCE ) && CheckValid( TARGET ) )
+	{
+		SelectedClasses.resize( TargetClassFiles.size() );
+		bool TempIsUnreal = SourceIsUnreal;
+		SourceIsUnreal = TargetIsUnreal;
+		
+		ClassFiles.swap( TargetClassFiles );
+		ClassDependencies.swap( TargetClassDependencies );
+		SourcePath.swap( TargetPath );
+		SourceProjectName.swap( TargetProjectName );
+
+		return true;
+	}
+	else
+	{
+		SetError( "One or Both Projects is not valid", "SwitchProjects" );
 	}
 	return false;
 }
@@ -202,9 +220,9 @@ bool UnrealCodeExporter::CheckPath( const std::string& Path, const bool CheckUpr
 	return Founded;
 }
 
-bool UnrealCodeExporter::CheckSourceValid() const
+bool UnrealCodeExporter::CheckValid( Targets Target ) const
 {
-	return( !SourcePath.empty() && !SourceProjectName.empty() );
+	return( Target )?( !SourcePath.empty() ):( !TargetPath.empty() );
 }
 
 bool UnrealCodeExporter::CheckSourceFolder( const std::string& ProjectPath ) const
@@ -218,26 +236,42 @@ bool UnrealCodeExporter::CheckSourceFolder( const std::string& ProjectPath ) con
 	return false;
 }
 
-void UnrealCodeExporter::SearchProjectClasses( const std::string& ProjectPath, const std::string& ProjectName, stringPairMap& ClassMap )
+void UnrealCodeExporter::SearchProjectClasses( const Targets Target )
 {
-	// TODO : Add Parameter for Non-UnrealProject Search
-	stringList IgnoreFolders = { ".", "..", "Resources" };
+	stringList IgnoreFolders;
+	const std::string& ProjectPath = ( Target ) ? ( SourcePath ) : ( TargetPath );
+	const std::string& ProjectName = ( Target ) ? ( SourceProjectName ) : ( TargetProjectName );
+	stringPairMap& ClassMap = ( Target ) ? ( ClassFiles ) : ( TargetClassFiles );
+	bool& IsUnrealProject = ( Target ) ? ( SourceIsUnreal ) : ( TargetIsUnreal );
+
+	if( IsUnrealProject )
+	{
+		IgnoreFolders = { ".", "..", "Resources" };
+	}
+	else
+	{
+		IgnoreFolders = { ".", ".." };
+	}
 	
 	auto FileFound = [&]( std::string& ClassName, bool IsHeader, std::string& Path ) -> void
 	{
-		if( IsHeader )
+		if( ClassName != ProjectName )
 		{
-			ClassMap[ClassName].first = Path;
-		}
-		else
-		{
-			ClassMap[ClassName].second = Path;
+			if( IsHeader )
+			{
+				ClassMap[ClassName].first = Path;
+			}
+			else
+			{
+				ClassMap[ClassName].second = Path;
+			}
 		}
 	};
 
 	std::function<void( std::string )> ScanDirectory = [&]( std::string SubPath ) -> void
 	{
-		DIR* Directory = opendir( ( ProjectPath + "Source\\" + ProjectName + SubPath ).c_str() );
+		std::string UnrealProjectPath = ( IsUnrealProject ) ? ( "Source\\" + ProjectName ) : ( "" );
+		DIR* Directory = opendir( ( ProjectPath + UnrealProjectPath + SubPath ).c_str() );
 		if( Directory != NULL )
 		{
 			dirent* Result;
@@ -247,11 +281,11 @@ void UnrealCodeExporter::SearchProjectClasses( const std::string& ProjectPath, c
 				if( Result->d_type == DT_REG ) // FILE
 				{
 					auto Found = FileName.rfind( ".cpp" );
-					if( Found != FileName.npos && FileName != ( ProjectName + ".cpp" ) )
+					if( Found != FileName.npos )
 					{
 						FileFound( FileName.substr( 0, Found ), false, SubPath );
 					}
-					else if( ( Found = FileName.rfind( ".h" ) ) != FileName.npos && FileName != ( ProjectName + ".h" ) )
+					else if( ( Found = FileName.rfind( ".h" ) ) != FileName.npos )
 					{
 						FileFound( FileName.substr( 0, Found ), true, SubPath );
 					}
