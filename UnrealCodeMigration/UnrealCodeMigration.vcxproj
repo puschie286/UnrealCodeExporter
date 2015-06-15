@@ -76,12 +76,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CodeMigrate.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="UnrealCodeExporter.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CodeMigrate.h" />
     <ClInclude Include="dirent.h" />
     <ClInclude Include="UnrealCodeExporter.h" />
   </ItemGroup>

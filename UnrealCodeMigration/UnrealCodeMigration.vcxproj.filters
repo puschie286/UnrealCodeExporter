@@ -18,17 +18,11 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CodeMigrate.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="UnrealCodeExporter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CodeMigrate.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="dirent.h">
       <Filter>Header Files</Filter>
     </ClInclude>
