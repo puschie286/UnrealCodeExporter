@@ -9,9 +9,9 @@ int main()
 	UnrealCodeExporter Exporter;
 
 	// Test Setup
-	if( !Exporter.SetPath( UnrealCodeExporter::SOURCE, "F:\\UnrealProjects\\UnrealDev\\SoundVisualization\\SoundVisualization.uproject") ) PostError( Exporter );
+	if( !Exporter.SetPath( UnrealCodeExporter::TARGET, "F:\\UnrealProjects\\UnrealDev\\SoundVisualization\\SoundVisualization.uproject") ) PostError( Exporter );
 	// if( !Exporter.SetSourcePath( "F:\\UnrealProjects\\UnrealDev\\SoundVisualization\\" ) ) PostError( Exporter );
-	if( !Exporter.SetPath( UnrealCodeExporter::TARGET, "F:\\UnrealProjects\\UnrealDev\\PhysicalConstraint\\PhysicalConstraint.uproject" ) ) PostError( Exporter );
+	if( !Exporter.SetPath( UnrealCodeExporter::SOURCE, "F:\\UnrealProjects\\UnrealDev\\PhysicalConstraint\\PhysicalConstraint.uproject" ) ) PostError( Exporter );
 	//if( !Exporter.SetTargetPath( "F:\\UnrealProjects\\UnrealDev\\PhysicalConstraint\\" ) ) PostError( Exporter );
 	
 	// Test Analyse
@@ -36,8 +36,6 @@ int main()
 
 	// Test Class Selection
 	UnrealCodeExporter::stringList ClassSelection;
-	ClassSelection.push_back( "Flasch" ); // Produce Error
-	if( !Exporter.SetClassSelection( ClassSelection ) ) PostError( Exporter );
 	if( !Exporter.SetClassSelectionAll( false ) ) PostError( Exporter );
 	if( !ClassList.empty() )
 	{

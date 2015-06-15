@@ -43,11 +43,9 @@ bool UnrealCodeExporter::Analyse( Targets Target )
 		}
 		SearchProjectClasses( Target );
 		
-		if( !IsUnreal )// Non-UnrealProject Import
-		{
-			// TODO : Verify for Non-UnrealProject Classes
-		}
-		else
+		// TODO : Verify for Non-UnrealProject Classes
+		
+		if( Target == SOURCE )
 		{
 			SelectedClasses.resize( ClassMap.size(), true ); // Create Default Selection
 		}
@@ -77,31 +75,76 @@ bool UnrealCodeExporter::CopySelection()
 			const std::string TargetPathConst = ( TargetIsUnreal ) ? ( TargetPath + "Source\\" + TargetProjectName ) : ( TargetPath );
 			auto ClassIter = ClassFiles.begin();
 			std::string ErrorFiles;
-			/*
-			std::string ProjectName;
-			std::string ProjectAPI;
-			if( TargetIsUnreal )
+
+			std::string SourceSearch[2];
+			std::string TargetReplace[2];
+
+			if( SourceIsUnreal )
 			{
-				ProjectName = SourceProjectName + ".h";
-				ProjectAPI.resize( SourceProjectName.size() );
-				std::transform( SourceProjectName.begin(), SourceProjectName.end(), ProjectAPI.begin(), toupper );
-				ProjectAPI += "_API";
+				SourceSearch[0] = SourceProjectName + ".h";
+				SourceSearch[1].resize( SourceProjectName.size() );
+				std::transform( SourceProjectName.begin(), SourceProjectName.end(), SourceSearch[1].begin(), toupper );
+				SourceSearch[1] += "_API";
 			}
 			else
 			{
-				ProjectName = "PROJECTNAME.h";
-				ProjectAPI = "PROJECTNAME_API";
+				SourceSearch[0] = "PROJECTNAME.h";
+				SourceSearch[1] = "PROJECTNAME_API";
 			}
-			*/
 
-			auto CopyFile = [&]( const std::string& FilePath ) -> void
+			if( TargetIsUnreal )
+			{
+				TargetReplace[0] = TargetProjectName + ".h";
+				TargetReplace[1].resize( TargetProjectName.size() );
+				std::transform( TargetProjectName.begin(), TargetProjectName.end(), TargetReplace[1].begin(), toupper );
+				TargetReplace[1] += "_API";
+			}
+			else
+			{
+				TargetReplace[0] = "PROJECTNAME.h";
+				TargetReplace[1] = "PROJECTNAME_API";
+			}
+
+			auto CopyFile = [&]( const std::string& FilePath, bool isHeader ) -> void
 			{
 				SourceFile.open( SourcePathConst + FilePath, std::ifstream::in | std::ifstream::binary );
 				TargetFile.open( TargetPathConst + FilePath, std::ofstream::out | std::ofstream::binary );
 
 				if( SourceFile.is_open() && TargetFile.is_open() )
 				{
-					// TODO : Manipulate Files while copy
+					if( !SourceIsUnreal && !TargetIsUnreal )
+					{
+						TargetFile << SourceFile.rdbuf();
+					}
+					else
+					{
+						bool Skip = false;
+						for( std::string Line; std::getline( SourceFile, Line, '\n' ); )
+						{
+							if( !Skip )
+							{
+								if( isHeader )
+								{
+									size_t Found = Line.find( SourceSearch[1] );
+									if( Found != Line.npos )
+									{
+										Line.replace( Found, SourceSearch[1].size(), TargetReplace[1] );
+										Skip = true;
+									}
+								}
+								else
+								{
+									size_t Found = Line.find( SourceSearch[0] );
+									if( Found != Line.npos )
+									{
+										Line.replace( Found, SourceSearch[0].size(), TargetReplace[0] );
+										Skip = true;
+									}
+								}
+							}
+							TargetFile << Line << std::endl;
+						}
+					}
 				}
 				else
 				{
@@ -116,8 +159,9 @@ bool UnrealCodeExporter::CopySelection()
 			{
 				if( ShouldCopy )
 				{
-					CopyFile( ClassIter->second.first + ClassIter->first + ".h" );
-					CopyFile( ClassIter->second.second + ClassIter->first + ".cpp" );
+					// TODO : Check for File override
+					CopyFile( ClassIter->second.first + ClassIter->first + ".h", true );
+					CopyFile( ClassIter->second.second + ClassIter->first + ".cpp", false );
 				}
 				if( ClassIter != ClassFiles.end() )
 				{
@@ -127,14 +171,11 @@ bool UnrealCodeExporter::CopySelection()
 
 			if( ErrorFiles.empty() )
 			{
-				// TODO : Check for File override
-
-				// TODO : Clear after Copy Failed
-
 				return true;
 			}
 			else
 			{
+				// TODO : Clear after Copy Failed
 				SetError( "Error with following Files : " + ErrorFiles.substr( 0, -2 ), "CopySelection" );
 			}
 		}
@@ -175,14 +216,37 @@ bool UnrealCodeExporter::SetClassSelection( const stringList& ClassSelectionList
 	{
 		if( !ClassFiles.empty() )
 		{
+			std::function<void( const std::string& ClassName )> CheckDependency = [&]( const std::string& ClassName ) -> void
+			{
+				if( !ClassDependencies[ClassName].empty() )
+				{
+					for( std::string& DepClass : ClassDependencies[ClassName] )
+					{
+						auto Found = ClassFiles.find( DepClass );
+						if( Found != ClassFiles.end() )
+						{
+							size_t iter = std::distance( ClassFiles.begin(), Found );
+							if( !SelectedClasses[iter] )
+							{
+								SelectedClasses[iter] = true;
+								CheckDependency( DepClass );
+							}
+						}
+					}
+				}
+			};
 			std::string ErrorString;
 			for( const std::string& Class : ClassSelectionList )
 			{
-				const auto Found = ClassFiles.find( Class );
+				auto Found = ClassFiles.find( Class );
 				if( Found != ClassFiles.end() )
 				{
-					SelectedClasses[std::distance( ClassFiles.begin(), Found )] = true;
-					// TODO : Check Dependency
+					size_t iter = std::distance( ClassFiles.begin(), Found );
+					if( !SelectedClasses[iter] )
+					{
+						SelectedClasses[iter] = true;
+						CheckDependency( Class );
+					}
 				}
 				else
 				{
@@ -407,12 +471,16 @@ void UnrealCodeExporter::AnalyseClassDependency( const std::string& ClassName, c
 					continue;
 				}
 
-				auto Find0 = Line.find( "\"" ), Find1 = Line.rfind( "\"" ) - 2;
+				auto Find0 = Line.find( "\"" ) + 1, Find1 = Line.rfind( "\"" ) - 2;
 				if( Line.rfind( "/" ) != Line.npos )
 				{
 					Find0 = Line.rfind( "/" ) + 1;
 				}
 				std::string& Include = Line.substr( Find0, Find1 - Find0 );
+				if( Include == ClassName )
+				{
+					continue;
+				}
 				if( ClassFiles.find( Include ) != ClassFiles.end() )
 				{
 					ClassDependencies[ClassName].push_back( Include );
