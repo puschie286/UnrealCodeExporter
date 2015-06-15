@@ -4,6 +4,7 @@
 
 #include <functional>
 #include <fstream>
+#include <algorithm>
 
 
 bool UnrealCodeExporter::SetPath( const Targets Target, const std::string& Path )
@@ -66,32 +67,96 @@ bool UnrealCodeExporter::Analyse( Targets Target )
 
 bool UnrealCodeExporter::CopySelection()
 {
-	if( CheckValid()  )
+	if( CheckValid( TARGET ) && CheckValid( SOURCE ) )
 	{
-		// TODO : Copy Selected Files
-		// TODO : Manipulate Coppied Files
-
-		if( TargetProjectName.empty() ) // Export to Non-UnrealProject
+		if( !SelectionEmty() )
 		{
-			const std::string ProjectName = "PROJECTNAME.h";
-			const std::string ProjectAPI = "PROJECTNAME_API";
-			//const std::string UseModuleComment = "//MODULE : ";
+			std::ifstream SourceFile;
+			std::ofstream TargetFile;
+			const std::string SourcePathConst = ( SourceIsUnreal ) ? ( SourcePath + "Source\\" + SourceProjectName ) : ( SourcePath );
+			const std::string TargetPathConst = ( TargetIsUnreal ) ? ( TargetPath + "Source\\" + TargetProjectName ) : ( TargetPath );
+			auto ClassIter = ClassFiles.begin();
+			std::string ErrorFiles;
+			/*
+			std::string ProjectName;
+			std::string ProjectAPI;
+			if( TargetIsUnreal )
+			{
+				ProjectName = SourceProjectName + ".h";
+				ProjectAPI.resize( SourceProjectName.size() );
+				std::transform( SourceProjectName.begin(), SourceProjectName.end(), ProjectAPI.begin(), toupper );
+				ProjectAPI += "_API";
+			}
+			else
+			{
+				ProjectName = "PROJECTNAME.h";
+				ProjectAPI = "PROJECTNAME_API";
+			}
+			*/
+
+			auto CopyFile = [&]( const std::string& FilePath ) -> void
+			{
+				SourceFile.open( SourcePathConst + FilePath, std::ifstream::in | std::ifstream::binary );
+				TargetFile.open( TargetPathConst + FilePath, std::ofstream::out | std::ofstream::binary );
+
+				if( SourceFile.is_open() && TargetFile.is_open() )
+				{
+					// TODO : Manipulate Files while copy
+				}
+				else
+				{
+					ErrorFiles += FilePath + ", ";
+				}
+
+				SourceFile.close();
+				TargetFile.close();
+			};
+			
+			for( const bool ShouldCopy : SelectedClasses )
+			{
+				if( ShouldCopy )
+				{
+					CopyFile( ClassIter->second.first + ClassIter->first + ".h" );
+					CopyFile( ClassIter->second.second + ClassIter->first + ".cpp" );
+				}
+				if( ClassIter != ClassFiles.end() )
+				{
+					ClassIter++;
+				}
+			}
+
+			if( ErrorFiles.empty() )
+			{
+				// TODO : Check for File override
+
+				// TODO : Clear after Copy Failed
+
+				return true;
+			}
+			else
+			{
+				SetError( "Error with following Files : " + ErrorFiles.substr( 0, -2 ), "CopySelection" );
+			}
+		}
+		else
+		{
+			SetError( "No Classes found or selected", "CopySelection" );
 		}
 	}
 	else
 	{
-		SetError( "SourceProject not Valid", "CopySelection" );
+		SetError( "Projects not Valid", "CopySelection" );
 	}
 	return false;
 }
 
 bool UnrealCodeExporter::GetClassList( stringList& ClassList, Targets Target )
 {
-	stringPairMap& ClassMap = ( Target ) ? ( ClassFiles ) : ( TargetClassFiles );
+	const stringPairMap& ClassMap = ( Target ) ? ( ClassFiles ) : ( TargetClassFiles );
 	if( CheckValid( Target ) )
 	{
 		ClassList.clear();
-		for( auto& Element : ClassMap )
+		for( const auto& Element : ClassMap )
 		{
 			ClassList.push_back( Element.first );
 		}
@@ -113,7 +178,7 @@ bool UnrealCodeExporter::SetClassSelection( const stringList& ClassSelectionList
 			std::string ErrorString;
 			for( const std::string& Class : ClassSelectionList )
 			{
-				auto Found = ClassFiles.find( Class );
+				const auto Found = ClassFiles.find( Class );
 				if( Found != ClassFiles.end() )
 				{
 					SelectedClasses[std::distance( ClassFiles.begin(), Found )] = true;
@@ -236,6 +301,18 @@ bool UnrealCodeExporter::CheckSourceFolder( const std::string& ProjectPath ) con
 	return false;
 }
 
+bool UnrealCodeExporter::SelectionEmty() const
+{
+	if( !ClassFiles.empty() )
+	{
+		for( const bool Value : SelectedClasses )
+		{
+			if( Value ) return false;
+		}
+	}
+	return true;
+}
+
 void UnrealCodeExporter::SearchProjectClasses( const Targets Target )
 {
 	stringList IgnoreFolders;
@@ -243,7 +320,7 @@ void UnrealCodeExporter::SearchProjectClasses( const Targets Target )
 	const std::string& ProjectName = ( Target ) ? ( SourceProjectName ) : ( TargetProjectName );
 	stringPairMap& ClassMap = ( Target ) ? ( ClassFiles ) : ( TargetClassFiles );
 	bool& IsUnrealProject = ( Target ) ? ( SourceIsUnreal ) : ( TargetIsUnreal );
-
+	const std::string UnrealProjectPath = ( IsUnrealProject ) ? ( "Source\\" + ProjectName ) : ( "" );
 	if( IsUnrealProject )
 	{
 		IgnoreFolders = { ".", "..", "Resources" };
@@ -253,7 +330,7 @@ void UnrealCodeExporter::SearchProjectClasses( const Targets Target )
 		IgnoreFolders = { ".", ".." };
 	}
 	
-	auto FileFound = [&]( std::string& ClassName, bool IsHeader, std::string& Path ) -> void
+	auto FileFound = [&]( const std::string& ClassName, const bool IsHeader, const std::string& Path ) -> void
 	{
 		if( ClassName != ProjectName )
 		{
@@ -268,9 +345,8 @@ void UnrealCodeExporter::SearchProjectClasses( const Targets Target )
 		}
 	};
 
-	std::function<void( std::string )> ScanDirectory = [&]( std::string SubPath ) -> void
+	std::function<void( const std::string& )> ScanDirectory = [&]( const std::string& SubPath ) -> void
 	{
-		std::string UnrealProjectPath = ( IsUnrealProject ) ? ( "Source\\" + ProjectName ) : ( "" );
 		DIR* Directory = opendir( ( ProjectPath + UnrealProjectPath + SubPath ).c_str() );
 		if( Directory != NULL )
 		{
@@ -293,7 +369,7 @@ void UnrealCodeExporter::SearchProjectClasses( const Targets Target )
 				else if( Result->d_type == DT_DIR ) // DIRECTORY
 				{
 					bool test = true;
-					for( std::string& Ignore : IgnoreFolders )
+					for( const std::string& Ignore : IgnoreFolders )
 					{
 						if( Ignore == FileName )
 						{
@@ -361,8 +437,8 @@ void UnrealCodeExporter::AnalyseClassDependency( const std::string& ClassName, c
 
 void UnrealCodeExporter::SetLocation( const std::string& Path, std::string& SavePath, std::string& SaveName ) const
 {
-	size_t FoundExtention = Path.rfind( "." );
-	size_t FoundSlash = Path.rfind( "\\" ) + 1;
+	const size_t FoundExtention = Path.rfind( "." );
+	const size_t FoundSlash = Path.rfind( "\\" ) + 1;
 
 	SavePath = Path.substr( 0, FoundSlash );
 	SaveName = ( FoundExtention != std::string::npos ) ? ( Path.substr( FoundSlash, FoundExtention - FoundSlash ) ) : ( "" );

@@ -52,6 +52,7 @@ private: // Path has to be Valid
 	bool			CheckPath( const std::string& Path, const bool CheckUproject = false ) const;
 	bool			CheckValid( const Targets Target = SOURCE ) const;
 	bool			CheckSourceFolder( const std::string& ProjectPath ) const;
+	bool			SelectionEmty() const;
 
 	void			SetError( const std::string& Message, const std::string& Section );
 	void			ClearData();

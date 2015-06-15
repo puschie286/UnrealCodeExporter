@@ -8,6 +8,11 @@
 3. Check Project Dependency in Classes
 	1. Add Module Dependency Check in 'AnalyseClassDependency'
 	2. Add in ModuleDependencyList
+4. Work Internly with C-String insteat of std::string
+	1. Only Store C-String in Class used structures
+	2. Change Class Member std::string to C-String
+	3. Change Function argument to C-String
 NICE TO HAVE
 1. Ignore Folder-List Management for Scan
 2. Improve Public Function Valid-Check
+3. Remove std::string for better performance

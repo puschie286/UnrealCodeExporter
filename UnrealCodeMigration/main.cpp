@@ -46,6 +46,9 @@ int main()
 		if( !Exporter.SetClassSelection( ClassSelection ) ) PostError( Exporter );
 	}
 
+	// Test File Copy
+	if( !Exporter.CopySelection() ) PostError( Exporter );
+
 	// Wait with close
 	int i;
 	std::cin >> i;
