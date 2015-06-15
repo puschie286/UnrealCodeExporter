@@ -1,5 +1,4 @@
 #include "UnrealCodeExporter.h"
-#include "CodeMigrate.h"
 #include <iostream>
 
 void PostError( UnrealCodeExporter& Instance );
